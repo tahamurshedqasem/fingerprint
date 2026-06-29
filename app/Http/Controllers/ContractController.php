@@ -75,6 +75,69 @@ class ContractController extends Controller
     }
 
    
+    public function save(Request $request, $id)
+    {
+        try {
+            $contract = Contract::findOrFail($id);
+            
+            $request->validate([
+                'contract_data' => 'required|json'
+            ]);
+
+            $contract->update([
+                'terms' => $request->contract_data
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حفظ العقد بنجاح',
+                'contract' => $contract
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function uploadScreenshot(Request $request, $id)
+    {
+        try {
+            $contract = Contract::findOrFail($id);
+            
+            $request->validate([
+                'screenshot' => 'required|string'
+            ]);
+
+            $imageData = $request->screenshot;
+            $imageData = str_replace('data:image/png;base64,', '', $imageData);
+            $imageData = str_replace(' ', '+', $imageData);
+            
+            $imageName = 'screenshot_' . $contract->contract_number . '_' . time() . '.png';
+            $path = storage_path('app/public/contracts/');
+            
+            if (!file_exists($path)) {
+                mkdir($path, 0777, true);
+            }
+            
+            file_put_contents($path . $imageName, base64_decode($imageData));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم رفع لقطة الشاشة بنجاح',
+                'path' => asset('storage/contracts/' . $imageName)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function sign(Request $request, $id)
     {
         try {
@@ -143,7 +206,7 @@ class ContractController extends Controller
         }
     }
 
-    
+   
     private function generateDeviceFingerprint($request)
     {
         $components = [
